@@ -1,0 +1,44 @@
+---
+- name: AUTOMATIC ACL & OSPF set up
+  hosts: R1
+  gather_facts: false
+  connection: local
+  vars:
+    cli:
+      username: R1
+      password: cisco123!
+      auth_pass: "cisco123!"
+  tasks:
+    - name: Configure ospf
+      ios_config:
+        lines:
+          - network 0.0.0.0 255.255.255.255 area 0
+        parents: router ospf 300
+        provider: "{{ cli }}"
+        authorize: yes
+      register: print_output
+    -  debug: var=print_output
+
+    - name: ACL setting 
+      ios_config:
+        lines:
+         - 10 permit ip host 2.2.2.2 any log
+         - 20 permit ip host 3.3.3.3 any log
+        parents : ip access-list extended TEST
+        match: exact 
+        provider:
+          authorize: yes
+          auth_pass: "cisco123!"
+      register: print_output
+    -  debug: var=print_output
+
+    - name: DISPLAYING ACL setting
+      ios_command:
+       commands:
+         - show ip access-list
+      register: config
+ 
+    - name: SAVE OUTPUT TO ./backups/
+      copy:
+       content: "{{ config.stdout[0] }}"
+       dest: "backups/show_ACL_{{ inventory_hostname }}.txt"
